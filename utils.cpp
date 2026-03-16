@@ -1,26 +1,88 @@
 #include "utils.h"
 
-static const char* RESET   = "\033[0m";
-static const char* BOLD    = "\033[1m";
-static const char* RED     = "\033[31m";
-static const char* GREEN   = "\033[32m";
-static const char* YELLOW  = "\033[33m";
-static const char* BLUE    = "\033[34m";
-static const char* MAGENTA = "\033[35m";
-static const char* CYAN    = "\033[36m";
-static const char* WHITE   = "\033[37m";
+char currentCustomerName[NAME_LEN] = "";
+char currentEmployeeName[NAME_LEN] = "";
+char currentAdminName[NAME_LEN] = "";
 
-bool compareStrings(char *p1, char *p2)
+bool compareStrings(const char *p1, const char *p2)
 {
-    int a;
-    for (a = 0; p2[a] != '\0'; a++)
+    int i = 0;
+    while (p1[i] != '\0' && p2[i] != '\0')
     {
-        if (p1[a] != p2[a])
+        if (p1[i] != p2[i])
         {
             return false;
         }
+        i++;
     }
-    return (p1[a] == '\0');
+    return (p1[i] == '\0' && p2[i] == '\0');
+}
+
+void copyString(char *dest, const char *src)
+{
+    int i = 0;
+    while (src[i] != '\0')
+    {
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';
+}
+
+bool isEmptyString(const char *str)
+{
+    int i = 0;
+    while (str[i] != '\0')
+    {
+        if (str[i] != ' ' && str[i] != '\t' && str[i] != '\n' && str[i] != '\r')
+        {
+            return false;
+        }
+        i++;
+    }
+    return true;
+}
+
+bool getNonEmptyLine(const char *promptText, char *buffer, int len)
+{
+    while (true)
+    {
+        printPrompt(promptText);
+        cin.getline(buffer, len);
+
+        if (!isEmptyString(buffer))
+        {
+            return true;
+        }
+
+        printError("Input cannot be empty. Please try again.");
+    }
+}
+
+bool usernameExists(const char *filename, const char *username)
+{
+    ifstream read(filename);
+    if (!read.is_open())
+    {
+        return false;
+    }
+
+    char *storedName = new char[NAME_LEN];
+    bool found = false;
+
+    while (read.getline(storedName, NAME_LEN, '|'))
+    {
+        if (compareStrings(storedName, username))
+        {
+            found = true;
+            break;
+        }
+        read.ignore(1000, '\n');
+    }
+
+    read.close();
+    delete[] storedName;
+    return found;
 }
 
 void encryptPassword(char *enpass)
@@ -39,6 +101,7 @@ void encryptPassword(char *enpass)
 int getValidInt(int min, int max)
 {
     int value;
+
     while (true)
     {
         cin >> value;
@@ -47,15 +110,20 @@ int getValidInt(int min, int max)
         {
             cin.clear();
             cin.ignore(1000, '\n');
-            cout << BOLD << RED << "Invalid input! Enter a number (" << min << " to " << max << "): " << RESET;
+            cout << BOLD << RED
+                 << "Invalid input! Enter a number (" << min << " to " << max << "): "
+                 << RESET;
         }
         else if (value < min || value > max)
         {
-            cout << BOLD << RED << "Invalid choice! Enter again (" << min << " to " << max << "): " << RESET;
+            cin.ignore(1000, '\n');
+            cout << BOLD << RED
+                 << "Invalid choice! Enter again (" << min << " to " << max << "): "
+                 << RESET;
         }
         else
         {
-            cin.ignore();
+            cin.ignore(1000, '\n');
             return value;
         }
     }
@@ -69,7 +137,6 @@ void logActivity(const char *message)
         time_t now = time(0);
         char *timeStr = ctime(&now);
         timeStr[strlen(timeStr) - 1] = '\0';
-
         act << "[" << timeStr << "] " << message << endl;
         act.close();
     }
@@ -83,7 +150,6 @@ void logAudit(const char *action)
         time_t now = time(0);
         char *timeStr = ctime(&now);
         timeStr[strlen(timeStr) - 1] = '\0';
-
         audit << "[AUDIT] [" << timeStr << "] " << action << endl;
         audit.close();
     }
@@ -98,23 +164,47 @@ void displayLine(int width, char ch)
     cout << endl;
 }
 
+static bool productIdExists(const char *targetId)
+{
+    ifstream read("catalogue.txt");
+    if (!read.is_open())
+    {
+        return false;
+    }
+
+    char *price = new char[NAME_LEN];
+    char *id = new char[ID_LEN];
+    bool found = false;
+
+    while (read.getline(price, NAME_LEN, '|'))
+    {
+        read.getline(id, ID_LEN, '|');
+
+        if (compareStrings(id, targetId))
+        {
+            found = true;
+            break;
+        }
+
+        read.ignore(1000, '\n');
+    }
+
+    read.close();
+    delete[] price;
+    delete[] id;
+    return found;
+}
+
 void displayCatalogue()
 {
     char *price = new char[NAME_LEN];
-    char *p_ID = new char[NAME_LEN];
+    char *p_ID = new char[ID_LEN];
     char *name = new char[NAME_LEN];
     char *category = new char[NAME_LEN];
     char *quantity = new char[NAME_LEN];
 
     cout << endl;
-    cout << CYAN;
-    displayLine(80, '-');
-    cout << RESET;
-    cout << BOLD << BLUE << "                           PRODUCT CATALOGUE" << RESET << endl;
-    cout << CYAN;
-    displayLine(80, '-');
-    cout << RESET;
-
+    printSection("PRODUCT CATALOGUE", 80);
     cout << left << setw(25) << "Product"
          << "$" << setw(10) << "Price"
          << setw(20) << "Category"
@@ -127,7 +217,7 @@ void displayCatalogue()
     fstream read("catalogue.txt", ios::in);
     if (!read.is_open())
     {
-        cout << BOLD << RED << "Error: Could not open catalogue.txt!" << RESET << endl;
+        printError("Error: Could not open catalogue.txt!");
         delete[] price;
         delete[] p_ID;
         delete[] name;
@@ -138,16 +228,18 @@ void displayCatalogue()
 
     while (read.getline(price, NAME_LEN, '|'))
     {
-        read.getline(p_ID, NAME_LEN, '|');
+        read.getline(p_ID, ID_LEN, '|');
         read.getline(name, NAME_LEN, '|');
         read.getline(category, NAME_LEN, '|');
         read.getline(quantity, NAME_LEN, '\n');
+
         cout << left << setw(25) << name
              << "$" << setw(10) << price
              << setw(20) << category
              << setw(10) << p_ID
              << setw(10) << quantity << endl;
     }
+
     read.close();
 
     cout << CYAN;
@@ -166,56 +258,62 @@ void catalogueAdd()
     char *id = new char[ID_LEN];
     char *name = new char[NAME_LEN];
     char *category = new char[NAME_LEN];
-    char *stock = new char[ID_LEN];
     int price;
+    int stockQty;
 
-    cout << BOLD << CYAN << "Enter Product ID: " << RESET;
-    cin.getline(id, ID_LEN);
-    cout << BOLD << CYAN << "Enter Product Name: " << RESET;
-    cin.getline(name, NAME_LEN);
-    cout << BOLD << CYAN << "Enter Product Category: " << RESET;
-    cin.getline(category, NAME_LEN);
-    cout << BOLD << CYAN << "Enter Product Price: " << RESET;
-    cin >> price;
-    cin.ignore();
-    cout << BOLD << CYAN << "Enter Stock Quantity: " << RESET;
-    cin.getline(stock, ID_LEN);
+    getNonEmptyLine("Enter Product ID: ", id, ID_LEN);
+
+    if (productIdExists(id))
+    {
+        printError("Product ID already exists.");
+        delete[] id;
+        delete[] name;
+        delete[] category;
+        return;
+    }
+
+    getNonEmptyLine("Enter Product Name: ", name, NAME_LEN);
+    getNonEmptyLine("Enter Product Category: ", category, NAME_LEN);
+
+    printPrompt("Enter Product Price: ");
+    price = getValidInt(1, 100000000);
+
+    printPrompt("Enter Stock Quantity: ");
+    stockQty = getValidInt(0, 1000000);
 
     ofstream outfile("catalogue.txt", ios::app);
     if (!outfile)
     {
-        cout << BOLD << RED << "Error: Could not open catalogue.txt for writing." << RESET << endl;
+        printError("Error: Could not open catalogue.txt for writing.");
         delete[] id;
         delete[] name;
         delete[] category;
-        delete[] stock;
         return;
     }
 
-    outfile << price << "|" << id << "|" << name << "|" << category << "|" << stock << endl;
+    outfile << price << "|" << id << "|" << name << "|" << category << "|" << stockQty << endl;
     outfile.close();
-    cout << BOLD << GREEN << "Product added successfully!" << RESET << endl;
 
+    printSuccess("Product added successfully!");
     logAudit("Product added to catalogue");
     logActivity("Product added to catalogue");
 
     delete[] id;
     delete[] name;
     delete[] category;
-    delete[] stock;
 }
 
 void catalogueDelete()
 {
     char *id = new char[ID_LEN];
-    cout << BOLD << CYAN << "Enter Product ID to Delete: " << RESET;
-    cin.getline(id, ID_LEN);
+    getNonEmptyLine("Enter Product ID to Delete: ", id, ID_LEN);
 
     ifstream infile("catalogue.txt");
     ofstream temp("temp.txt");
+
     if (!infile || !temp)
     {
-        cerr << BOLD << RED << "Error: Could not open files." << RESET << endl;
+        printError("Error: Could not open files.");
         delete[] id;
         return;
     }
@@ -239,6 +337,7 @@ void catalogueDelete()
             found = true;
             continue;
         }
+
         temp << price << "|" << pid << "|" << name << "|" << category << "|" << stock << endl;
     }
 
@@ -249,13 +348,13 @@ void catalogueDelete()
     {
         remove("catalogue.txt");
         rename("temp.txt", "catalogue.txt");
-        cout << BOLD << GREEN << "Product deleted successfully!" << RESET << endl;
+        printSuccess("Product deleted successfully!");
         logAudit("Product deleted from catalogue");
     }
     else
     {
         remove("temp.txt");
-        cout << BOLD << RED << "Product ID not found." << RESET << endl;
+        printError("Product ID not found.");
     }
 
     delete[] id;
@@ -269,15 +368,14 @@ void catalogueDelete()
 void catalogueEdit()
 {
     char *id = new char[ID_LEN];
-    cout << BOLD << CYAN << "Enter Product ID to Edit: " << RESET;
-    cin.getline(id, ID_LEN);
+    getNonEmptyLine("Enter Product ID to Edit: ", id, ID_LEN);
 
     ifstream infile("catalogue.txt");
     ofstream temp("temp.txt");
 
     if (!infile || !temp)
     {
-        cerr << BOLD << RED << "Error: Could not open files." << RESET << endl;
+        printError("Error: Could not open files.");
         delete[] id;
         return;
     }
@@ -299,14 +397,10 @@ void catalogueEdit()
         if (compareStrings(pid, id))
         {
             found = true;
-            cout << BOLD << CYAN << "Enter New Product Name: " << RESET;
-            cin.getline(name, NAME_LEN);
-            cout << BOLD << CYAN << "Enter New Category: " << RESET;
-            cin.getline(category, NAME_LEN);
-            cout << BOLD << CYAN << "Enter New Price: " << RESET;
-            cin.getline(price, ID_LEN);
-            cout << BOLD << CYAN << "Enter New Stock Quantity: " << RESET;
-            cin.getline(stock, ID_LEN);
+            getNonEmptyLine("Enter New Product Name: ", name, NAME_LEN);
+            getNonEmptyLine("Enter New Category: ", category, NAME_LEN);
+            getNonEmptyLine("Enter New Price: ", price, ID_LEN);
+            getNonEmptyLine("Enter New Stock Quantity: ", stock, ID_LEN);
         }
 
         temp << price << "|" << pid << "|" << name << "|" << category << "|" << stock << endl;
@@ -319,13 +413,13 @@ void catalogueEdit()
     {
         remove("catalogue.txt");
         rename("temp.txt", "catalogue.txt");
-        cout << BOLD << GREEN << "Product updated successfully!" << RESET << endl;
+        printSuccess("Product updated successfully!");
         logAudit("Product updated in catalogue");
     }
     else
     {
         remove("temp.txt");
-        cout << BOLD << RED << "Product ID not found." << RESET << endl;
+        printError("Product ID not found.");
     }
 
     delete[] id;
@@ -338,41 +432,45 @@ void catalogueEdit()
 
 void catalogueManage()
 {
-    cout << endl;
-    cout << CYAN;
-    displayLine(50, '=');
-    cout << RESET;
-    cout << BOLD << MAGENTA << "              CATALOGUE MANAGEMENT" << RESET << endl;
-    cout << CYAN;
-    displayLine(50, '=');
-    cout << RESET;
-
-    cout << GREEN << "1. Add new item to Catalogue" << RESET << endl;
-    cout << RED << "2. Delete item from Catalogue" << RESET << endl;
-    cout << BLUE << "3. Edit item in Catalogue" << RESET << endl;
-    cout << BOLD << YELLOW << "Enter your choice: " << RESET;
-
-    int choice = getValidInt(1, 3);
-
-    if (choice == 1)
+    while (true)
     {
-        catalogueAdd();
-    }
-    else if (choice == 2)
-    {
-        catalogueDelete();
-    }
-    else if (choice == 3)
-    {
-        catalogueEdit();
+        cout << endl;
+        printSection("CATALOGUE MANAGEMENT", 50);
+        printMenuOption(1, "Add new item to Catalogue", GREEN);
+        printMenuOption(2, "Delete item from Catalogue", RED);
+        printMenuOption(3, "Edit item in Catalogue", BLUE);
+        printMenuOption(4, "Back", YELLOW);
+        cout << endl;
+        printPrompt("Enter your choice: ");
+
+        int choice = getValidInt(1, 4);
+
+        if (choice == 1)
+        {
+            catalogueAdd();
+            pauseScreen();
+        }
+        else if (choice == 2)
+        {
+            catalogueDelete();
+            pauseScreen();
+        }
+        else if (choice == 3)
+        {
+            catalogueEdit();
+            pauseScreen();
+        }
+        else
+        {
+            return;
+        }
     }
 }
 
 void sendAnnouncement()
 {
     char *announcement = new char[TEXT_LEN];
-    cout << BOLD << CYAN << "Write your announcement: " << RESET;
-    cin.getline(announcement, TEXT_LEN);
+    getNonEmptyLine("Write your announcement: ", announcement, TEXT_LEN);
 
     fstream write("announcements.txt", ios::app);
     if (write.is_open())
@@ -380,14 +478,16 @@ void sendAnnouncement()
         time_t now = time(0);
         char *timeStr = ctime(&now);
         timeStr[strlen(timeStr) - 1] = '\0';
+
         write << "[" << timeStr << "] " << announcement << endl;
         write.close();
-        cout << BOLD << GREEN << "Announcement sent successfully!" << RESET << endl;
+
+        printSuccess("Announcement sent successfully!");
         logAudit("Announcement sent");
     }
     else
     {
-        cout << BOLD << RED << "Error: Could not open announcements.txt!" << RESET << endl;
+        printError("Error: Could not open announcements.txt!");
     }
 
     delete[] announcement;
@@ -408,13 +508,7 @@ void viewAnnouncements()
     {
         hasAnnouncements = true;
         cout << endl;
-        cout << CYAN;
-        displayLine(60, '*');
-        cout << RESET;
-        cout << BOLD << YELLOW << "                NEW ANNOUNCEMENTS" << RESET << endl;
-        cout << CYAN;
-        displayLine(60, '*');
-        cout << RESET;
+        printSection("NEW ANNOUNCEMENTS", 60);
     }
 
     while (read.getline(line, TEXT_LEN))
@@ -425,7 +519,7 @@ void viewAnnouncements()
     if (hasAnnouncements)
     {
         cout << CYAN;
-        displayLine(60, '*');
+        displayLine(60, '-');
         cout << RESET;
     }
 

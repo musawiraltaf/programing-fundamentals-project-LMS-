@@ -1,105 +1,122 @@
 #include "employee.h"
 
-static const char* RESET   = "\033[0m";
-static const char* BOLD    = "\033[1m";
-static const char* RED     = "\033[31m";
-static const char* GREEN   = "\033[32m";
-static const char* YELLOW  = "\033[33m";
-static const char* BLUE    = "\033[34m";
-static const char* MAGENTA = "\033[35m";
-static const char* CYAN    = "\033[36m";
-static const char* WHITE   = "\033[37m";
+static bool parseEmployeeRecord(ifstream &read, char *name, char *password)
+{
+    if (!read.getline(name, PASS_LEN, '|'))
+    {
+        return false;
+    }
+    if (!read.getline(password, PASS_LEN, '|'))
+    {
+        return false;
+    }
+    read.ignore(1000, '\n');
+    return true;
+}
 
 void emenu()
 {
-    cout << CYAN;
-    displayLine(70, '=');
-    cout << RESET;
-    cout << BOLD << MAGENTA << "                 SECURESHOP - EMPLOYEE PORTAL" << RESET << endl;
-    cout << CYAN;
-    displayLine(70, '=');
-    cout << RESET << endl;
+    printHeader("SECURESHOP - EMPLOYEE PORTAL");
 
-    cout << BOLD << WHITE << "Choose an option:" << RESET << endl;
-    cout << GREEN << "1. Register New Employee" << RESET << endl;
-    cout << BLUE << "2. Login" << RESET << endl;
-    cout << BOLD << YELLOW << "Enter your choice: " << RESET;
-
-    int choice = getValidInt(1, 2);
-
-    if (choice == 1)
+    while (true)
     {
-        eregistration();
-    }
-    if (choice == 2)
-    {
-        if (everify())
+        printInfo("Choose an option:");
+        cout << endl;
+        printMenuOption(1, "Register New Employee", GREEN);
+        printMenuOption(2, "Login", BLUE);
+        printMenuOption(3, "Back", RED);
+        cout << endl;
+        printPrompt("Enter your choice: ");
+
+        int choice = getValidInt(1, 3);
+
+        if (choice == 1)
         {
-            cout << endl;
-            cout << GREEN;
-            displayLine(70, '=');
-            cout << RESET;
-            cout << BOLD << GREEN << "             LOGIN SUCCESSFUL - Welcome Employee!" << RESET << endl;
-            cout << GREEN;
-            displayLine(70, '=');
-            cout << RESET;
-
-            logActivity("Employee login successful");
-
-            while (true)
+            eregistration();
+            pauseScreen();
+            printHeader("SECURESHOP - EMPLOYEE PORTAL");
+        }
+        else if (choice == 2)
+        {
+            if (everify())
             {
                 cout << endl;
-                cout << CYAN;
-                displayLine(50, '-');
+                cout << GREEN;
+                displayLine(70, '=');
                 cout << RESET;
-                cout << BOLD << BLUE << "                 EMPLOYEE MENU" << RESET << endl;
-                cout << CYAN;
-                displayLine(50, '-');
+                cout << BOLD << GREEN << "  LOGIN SUCCESSFUL - Welcome Employee!" << RESET << endl;
+                cout << GREEN;
+                displayLine(70, '=');
                 cout << RESET;
 
-                cout << GREEN   << "1. Manage Feedback" << RESET << endl;
-                cout << BLUE    << "2. Handle Support Requests" << RESET << endl;
-                cout << YELLOW  << "3. Catalogue Management" << RESET << endl;
-                cout << MAGENTA << "4. View Sales Record" << RESET << endl;
-                cout << CYAN    << "5. Low Stock Alert" << RESET << endl;
-                cout << WHITE   << "6. Send Announcement" << RESET << endl;
-                cout << RED     << "7. Exit Menu" << RESET << endl;
-                cout << BOLD << YELLOW << "Enter your choice: " << RESET;
+                logActivity("Employee login successful");
 
-                int mchoice = getValidInt(1, 7);
+                while (true)
+                {
+                    cout << endl;
+                    printSection("EMPLOYEE MENU", 50);
+                    printMenuOption(1, "Manage Feedback", GREEN);
+                    printMenuOption(2, "Handle Support Requests", BLUE);
+                    printMenuOption(3, "Catalogue Management", YELLOW);
+                    printMenuOption(4, "View Sales Record", MAGENTA);
+                    printMenuOption(5, "Low Stock Alert", CYAN);
+                    printMenuOption(6, "Send Announcement", WHITE);
+                    printMenuOption(7, "Exit Menu", RED);
+                    cout << endl;
+                    printPrompt("Enter your choice: ");
 
-                if (mchoice == 1)
-                {
-                    mfeedback();
+                    int mchoice = getValidInt(1, 7);
+
+                    if (mchoice == 1)
+                    {
+                        mfeedback();
+                        pauseScreen();
+                    }
+                    else if (mchoice == 2)
+                    {
+                        msupport();
+                        pauseScreen();
+                    }
+                    else if (mchoice == 3)
+                    {
+                        catalogueManage();
+                    }
+                    else if (mchoice == 4)
+                    {
+                        sales();
+                        pauseScreen();
+                    }
+                    else if (mchoice == 5)
+                    {
+                        stock();
+                        pauseScreen();
+                    }
+                    else if (mchoice == 6)
+                    {
+                        sendAnnouncement();
+                        logActivity("Employee sent announcement");
+                        pauseScreen();
+                    }
+                    else
+                    {
+                        printWarning("Exiting employee menu.");
+                        logActivity("Employee logged out");
+                        currentEmployeeName[0] = '\0';
+                        break;
+                    }
                 }
-                else if (mchoice == 2)
-                {
-                    msupport();
-                }
-                else if (mchoice == 3)
-                {
-                    catalogueManage();
-                }
-                else if (mchoice == 4)
-                {
-                    sales();
-                }
-                else if (mchoice == 5)
-                {
-                    stock();
-                }
-                else if (mchoice == 6)
-                {
-                    sendAnnouncement();
-                    logActivity("Employee sent announcement");
-                }
-                else if (mchoice == 7)
-                {
-                    cout << BOLD << RED << "Exiting employee menu." << RESET << endl;
-                    logActivity("Employee logged out");
-                    break;
-                }
+
+                printHeader("SECURESHOP - EMPLOYEE PORTAL");
             }
+            else
+            {
+                pauseScreen();
+                printHeader("SECURESHOP - EMPLOYEE PORTAL");
+            }
+        }
+        else
+        {
+            break;
         }
     }
 }
@@ -109,28 +126,26 @@ bool everify()
     bool authenticated = false;
     int attempts = 0;
 
-    do
+    while (attempts < 3 && !authenticated)
     {
         if (attempts > 0)
         {
-            cout << BOLD << RED << "Wrong credentials! Please try again." << RESET << endl;
+            printError("Wrong credentials! Please try again.");
             logActivity("Employee login failed attempt");
         }
 
         char *cname = new char[PASS_LEN];
         char *cpassword = new char[PASS_LEN];
 
-        cout << BOLD << CYAN << "Enter Your Name: " << RESET;
-        cin.getline(cname, PASS_LEN);
-        cout << BOLD << CYAN << "Enter Your Password: " << RESET;
-        cin.getline(cpassword, PASS_LEN);
+        getNonEmptyLine("Enter Your Name: ", cname, PASS_LEN);
+        getNonEmptyLine("Enter Your Password: ", cpassword, PASS_LEN);
 
         encryptPassword(cpassword);
 
         ifstream read("employee.txt");
         if (!read)
         {
-            cout << BOLD << RED << "Error: Could not open employee.txt!" << RESET << endl;
+            printError("Error: Could not open employee.txt!");
             delete[] cname;
             delete[] cpassword;
             return false;
@@ -139,32 +154,30 @@ bool everify()
         char *fname = new char[PASS_LEN];
         char *fpassword = new char[PASS_LEN];
 
-        while (read.getline(fname, PASS_LEN, '|'))
+        while (parseEmployeeRecord(read, fname, fpassword))
         {
-            read.getline(fpassword, PASS_LEN, '|');
-
             if (compareStrings(cname, fname) && compareStrings(cpassword, fpassword))
             {
                 authenticated = true;
+                copyString(currentEmployeeName, cname);
                 break;
             }
         }
-        read.close();
 
+        read.close();
         delete[] cname;
         delete[] cpassword;
         delete[] fname;
         delete[] fpassword;
 
         attempts++;
+    }
 
-        if (!authenticated && attempts >= 3)
-        {
-            cout << BOLD << RED << "WARNING: " << attempts << " failed login attempts!" << RESET << endl;
-            logActivity("Employee multiple failed login attempts - SECURITY ALERT");
-        }
-
-    } while (!authenticated);
+    if (!authenticated)
+    {
+        printError("WARNING: 3 failed login attempts!");
+        logActivity("Employee multiple failed login attempts - SECURITY ALERT");
+    }
 
     return authenticated;
 }
@@ -174,26 +187,32 @@ void eregistration()
     char *rname = new char[PASS_LEN];
     char *rpassword = new char[PASS_LEN];
 
-    cout << BOLD << CYAN << "Enter your Name: " << RESET;
-    cin.getline(rname, PASS_LEN, '\n');
-    cout << BOLD << CYAN << "Enter your Password: " << RESET;
-    cin.getline(rpassword, PASS_LEN, '\n');
+    getNonEmptyLine("Enter your Name: ", rname, PASS_LEN);
 
+    if (usernameExists("employee.txt", rname))
+    {
+        printError("Employee username already exists.");
+        delete[] rname;
+        delete[] rpassword;
+        return;
+    }
+
+    getNonEmptyLine("Enter your Password: ", rpassword, PASS_LEN);
     encryptPassword(rpassword);
 
     ofstream write("employee.txt", ios::app);
     if (!write.is_open())
     {
-        cout << BOLD << RED << "Error: Could not open employee.txt!" << RESET << endl;
+        printError("Error: Could not open employee.txt!");
         delete[] rname;
         delete[] rpassword;
         return;
     }
 
     write << rname << "|" << rpassword << "|" << endl;
-    cout << BOLD << GREEN << rname << " Registered Successfully!" << RESET << endl;
     write.close();
 
+    printSuccess("Employee registered successfully!");
     logActivity("New employee registered");
 
     delete[] rname;
@@ -209,7 +228,7 @@ void mfeedback()
     fstream display("feedback.txt", ios::in);
     if (!display.is_open())
     {
-        cout << BOLD << RED << "No feedback found or file could not be opened." << RESET << endl;
+        printWarning("No feedback found or file could not be opened.");
         delete[] fid;
         delete[] fname;
         delete[] ftext;
@@ -217,53 +236,43 @@ void mfeedback()
     }
 
     cout << endl;
-    cout << CYAN;
-    displayLine(70, '=');
-    cout << RESET;
-    cout << BOLD << GREEN << "                 CUSTOMER FEEDBACK" << RESET << endl;
-    cout << CYAN;
-    displayLine(70, '=');
-    cout << RESET;
-
+    printSection("CUSTOMER FEEDBACK", 70);
     cout << left << setw(15) << "Feedback ID" << setw(25) << "Customer" << "Feedback" << endl;
     cout << CYAN;
     displayLine(70, '-');
     cout << RESET;
 
+    bool hasData = false;
+
     while (display.getline(fid, ID_LEN, '|'))
     {
         display.getline(fname, NAME_LEN, '|');
         display.getline(ftext, TEXT_LEN, '\n');
+
         cout << left << setw(15) << fid << setw(25) << fname << endl;
         cout << "  -> " << ftext << endl << endl;
+        hasData = true;
     }
+
     display.close();
 
-    cout << CYAN;
-    displayLine(70, '-');
-    cout << RESET;
-
-    char *replyID = new char[ID_LEN];
-    cout << BOLD << CYAN << "Enter Feedback ID to reply to: " << RESET;
-    cin.getline(replyID, ID_LEN, '\n');
-
-    char *response = new char[TEXT_LEN];
-    cout << BOLD << CYAN << "Enter your response: " << RESET << endl;
-    cin.getline(response, TEXT_LEN, '\n');
-
-    fstream display1("feedback.txt", ios::in);
-    fstream tempwrite("temp.txt", ios::out);
-
-    if (!display1.is_open())
+    if (!hasData)
     {
-        cout << BOLD << RED << "Error: Could not open feedback.txt!" << RESET << endl;
+        printWarning("No feedback entries available.");
         delete[] fid;
         delete[] fname;
         delete[] ftext;
-        delete[] replyID;
-        delete[] response;
         return;
     }
+
+    char *replyID = new char[ID_LEN];
+    char *response = new char[TEXT_LEN];
+
+    getNonEmptyLine("Enter Feedback ID to reply to: ", replyID, ID_LEN);
+    getNonEmptyLine("Enter your response: ", response, TEXT_LEN);
+
+    fstream display1("feedback.txt", ios::in);
+    fstream tempwrite("temp.txt", ios::out);
 
     while (display1.getline(fid, ID_LEN, '|'))
     {
@@ -285,7 +294,7 @@ void mfeedback()
     remove("feedback.txt");
     rename("temp.txt", "feedback.txt");
 
-    cout << BOLD << GREEN << "Reply saved successfully!" << RESET << endl;
+    printSuccess("Reply saved successfully!");
     logActivity("Employee replied to customer feedback");
 
     delete[] fid;
@@ -304,7 +313,7 @@ void msupport()
     fstream display("Support.txt", ios::in);
     if (!display.is_open())
     {
-        cout << BOLD << RED << "No support requests found or file could not be opened." << RESET << endl;
+        printWarning("No support requests found or file could not be opened.");
         delete[] Sid;
         delete[] Sname;
         delete[] Stext;
@@ -312,53 +321,43 @@ void msupport()
     }
 
     cout << endl;
-    cout << CYAN;
-    displayLine(70, '=');
-    cout << RESET;
-    cout << BOLD << YELLOW << "                 SUPPORT REQUESTS" << RESET << endl;
-    cout << CYAN;
-    displayLine(70, '=');
-    cout << RESET;
-
+    printSection("SUPPORT REQUESTS", 70);
     cout << left << setw(15) << "Support ID" << setw(25) << "Customer" << "Request" << endl;
     cout << CYAN;
     displayLine(70, '-');
     cout << RESET;
 
+    bool hasData = false;
+
     while (display.getline(Sid, ID_LEN, '|'))
     {
         display.getline(Sname, NAME_LEN, '|');
         display.getline(Stext, TEXT_LEN, '\n');
+
         cout << left << setw(15) << Sid << setw(25) << Sname << endl;
         cout << "  -> " << Stext << endl << endl;
+        hasData = true;
     }
+
     display.close();
 
-    cout << CYAN;
-    displayLine(70, '-');
-    cout << RESET;
-
-    char *replyID = new char[ID_LEN];
-    cout << BOLD << CYAN << "Enter Support ID to reply to: " << RESET;
-    cin.getline(replyID, ID_LEN, '\n');
-
-    char *response = new char[TEXT_LEN];
-    cout << BOLD << CYAN << "Enter your response: " << RESET << endl;
-    cin.getline(response, TEXT_LEN, '\n');
-
-    fstream display1("Support.txt", ios::in);
-    fstream tempwrite("temp.txt", ios::out);
-
-    if (!display1.is_open())
+    if (!hasData)
     {
-        cout << BOLD << RED << "Error: Could not open Support.txt!" << RESET << endl;
+        printWarning("No support entries available.");
         delete[] Sid;
         delete[] Sname;
         delete[] Stext;
-        delete[] replyID;
-        delete[] response;
         return;
     }
+
+    char *replyID = new char[ID_LEN];
+    char *response = new char[TEXT_LEN];
+
+    getNonEmptyLine("Enter Support ID to reply to: ", replyID, ID_LEN);
+    getNonEmptyLine("Enter your response: ", response, TEXT_LEN);
+
+    fstream display1("Support.txt", ios::in);
+    fstream tempwrite("temp.txt", ios::out);
 
     while (display1.getline(Sid, ID_LEN, '|'))
     {
@@ -380,7 +379,7 @@ void msupport()
     remove("Support.txt");
     rename("temp.txt", "Support.txt");
 
-    cout << BOLD << GREEN << "Response saved successfully!" << RESET << endl;
+    printSuccess("Response saved successfully!");
     logActivity("Employee responded to support request");
 
     delete[] Sid;
@@ -402,20 +401,15 @@ void sales()
     fstream read("orderhistory.txt", ios::in);
 
     cout << endl;
-    cout << CYAN;
-    displayLine(65, '=');
-    cout << RESET;
-    cout << BOLD << MAGENTA << "                   SALES RECORD" << RESET << endl;
-    cout << CYAN;
-    displayLine(65, '=');
-    cout << RESET;
-
+    printSection("SALES RECORD", 65);
     cout << left << setw(20) << "Customer" << setw(20) << "Product"
          << "$" << setw(10) << "Price" << setw(10) << "Qty"
          << setw(10) << "ID" << endl;
     cout << CYAN;
     displayLine(65, '-');
     cout << RESET;
+
+    bool hasData = false;
 
     if (read.is_open())
     {
@@ -426,18 +420,21 @@ void sales()
             read.ignore(1, '|');
             read.getline(readp_ID, ID_LEN, '|');
             read >> readquantity;
-            read.ignore();
+            read.ignore(1000, '\n');
 
             cout << left << setw(20) << readname << setw(20) << readproduct
                  << "$" << setw(10) << readprice << setw(10) << readquantity
                  << setw(10) << readp_ID << endl;
 
             totalRevenue += (readprice * readquantity);
+            hasData = true;
         }
+        read.close();
     }
-    else
+
+    if (!hasData)
     {
-        cout << BOLD << RED << "Could not open order history file." << RESET << endl;
+        printWarning("Could not find sales data.");
     }
 
     cout << CYAN;
@@ -447,7 +444,6 @@ void sales()
     cout << CYAN;
     displayLine(65, '=');
     cout << RESET;
-    read.close();
 
     delete[] readname;
     delete[] readproduct;
@@ -457,7 +453,7 @@ void sales()
 void stock()
 {
     char *price = new char[NAME_LEN];
-    char *p_ID = new char[NAME_LEN];
+    char *p_ID = new char[ID_LEN];
     char *name = new char[NAME_LEN];
     char *category = new char[NAME_LEN];
     int quantity;
@@ -466,7 +462,7 @@ void stock()
     cout << YELLOW;
     displayLine(70, '!');
     cout << RESET;
-    cout << BOLD << RED << "          LOW STOCK ALERT - Restocking Needed!" << RESET << endl;
+    cout << BOLD << RED << "  LOW STOCK ALERT - Restocking Needed!" << RESET << endl;
     cout << YELLOW;
     displayLine(70, '!');
     cout << RESET;
@@ -485,36 +481,31 @@ void stock()
     {
         while (read.getline(price, NAME_LEN, '|'))
         {
-            read.getline(p_ID, NAME_LEN, '|');
+            read.getline(p_ID, ID_LEN, '|');
             read.getline(name, NAME_LEN, '|');
             read.getline(category, NAME_LEN, '|');
             read >> quantity;
-            read.ignore(1, '\n');
+            read.ignore(1000, '\n');
 
             if (quantity <= 5)
             {
                 cout << left << setw(25) << name << "$" << setw(10) << price
                      << setw(20) << category << setw(10) << p_ID
-                     << setw(10) << quantity << BOLD << RED << " *** LOW ***" << RESET << endl;
+                     << setw(10) << quantity << BOLD << RED << " LOW" << RESET << endl;
                 found = true;
             }
         }
+        read.close();
     }
 
     if (!found)
     {
-        cout << BOLD << GREEN << "All products have sufficient stock - no alerts." << RESET << endl;
+        printSuccess("All products have sufficient stock.");
     }
 
     cout << YELLOW;
     displayLine(70, '!');
     cout << RESET;
-    cout << BOLD << YELLOW << "These products need RESTOCKING!" << RESET << endl;
-    cout << YELLOW;
-    displayLine(70, '!');
-    cout << RESET;
-
-    read.close();
 
     delete[] price;
     delete[] p_ID;

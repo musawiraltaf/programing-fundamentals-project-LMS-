@@ -1,208 +1,199 @@
-// ====================== ADMIN.CPP ======================
-// This file implements all functionality of the admin module
-// The admin has the highest level of access and control in the system
-// Features: User management, inventory, discounts, 2FA (OTP),
-// activity monitoring, sales analysis, audit trail
-// Cybersecurity concepts: 2FA, access control, audit trail, monitoring
-// Dynamic memory allocation and pointers are being used (PF requirement)
-// ===========================================================
-
+#include <cstdlib>
 #include "admin.h"
 
-// ===================== amenu =====================
-// Main menu function for the admin
-// The admin logs in (password + OTP 2FA) and then gets access to the admin panel
-// Cybersecurity: Two-Factor Authentication (2FA) - an extra security layer
+static bool parseUserRecord(ifstream &read, char *name, char *password)
+{
+    if (!read.getline(name, PASS_LEN, '|'))
+    {
+        return false;
+    }
+    if (!read.getline(password, PASS_LEN, '|'))
+    {
+        return false;
+    }
+    read.ignore(1000, '\n');
+    return true;
+}
+
 void amenu()
 {
-    // Display welcome banner
-    displayLine(70, '=');
-    cout << "          SECURESHOP - ADMIN PORTAL" << endl;
-    displayLine(70, '=');
-    cout << endl;
+    printHeader("SECURESHOP - ADMIN PORTAL");
 
-    // First verify the password
-    if (averify())
+    if (!averify())
     {
-        // ===== TWO-FACTOR AUTHENTICATION (2FA) =====
-        // Generate OTP - cybersecurity bonus feature
-        // Use srand to set a random seed so a different OTP appears each time
-        srand(time(0));
-        int otp = 100000 + (rand() % 900000); // Generate a 6-digit OTP
+        printError("Admin authentication failed.");
+        pauseScreen();
+        return;
+    }
 
-        // Save OTP in a file (simulate sending to phone/email)
-        fstream gen("otp.txt", ios::out); // Overwrite old OTP
-        gen << otp;
-        gen.close();
+    srand(time(0));
+    int otp = 100000 + (rand() % 900000);
 
-        // Show OTP to the user (simulation - in reality it would be sent via SMS/email)
-        cout << endl;
-        displayLine(40, '*');
-        cout << "  Generated OTP: " << otp << endl;
-        cout << "  (This OTP is being shown only for simulation)" << endl;
-        displayLine(40, '*');
+    fstream gen("otp.txt", ios::out);
+    gen << otp;
+    gen.close();
 
-        // Take OTP input from user
-        cout << "Enter OTP: ";
-        int userotp;
-        cin >> userotp;
-        cin.ignore();
+    cout << endl;
+    cout << YELLOW;
+    displayLine(40, '*');
+    cout << RESET;
+    cout << BOLD << YELLOW << "  Generated OTP: " << otp << RESET << endl;
+    cout << WHITE << "  (This OTP is being shown only for simulation)" << RESET << endl;
+    cout << YELLOW;
+    displayLine(40, '*');
+    cout << RESET << endl;
 
-        // Verify OTP
-        bool otpValid = false;
-        fstream readOtp("otp.txt", ios::in);
-        int storedOtp;
+    printPrompt("Enter OTP: ");
+    int userotp;
+    cin >> userotp;
+    cin.ignore(1000, '\n');
 
-        if (readOtp.is_open())
+    bool otpValid = false;
+    fstream readOtp("otp.txt", ios::in);
+    int storedOtp;
+
+    if (readOtp.is_open())
+    {
+        readOtp >> storedOtp;
+        if (storedOtp == userotp)
         {
-            readOtp >> storedOtp;
-            // Match the user OTP with the stored OTP
-            if (storedOtp == userotp)
-            {
-                otpValid = true;
-            }
-            readOtp.close();
+            otpValid = true;
         }
+        readOtp.close();
+    }
 
-        if (otpValid)
+    if (!otpValid)
+    {
+        printError("Incorrect OTP! Access DENIED.");
+        logActivity("Admin login failed - wrong OTP (2FA failed)");
+        logAudit("SECURITY: Admin 2FA failed - unauthorized access attempt");
+        pauseScreen();
+        return;
+    }
+
+    cout << endl;
+    cout << GREEN;
+    displayLine(70, '=');
+    cout << RESET;
+    cout << BOLD << GREEN << "  LOGIN + 2FA SUCCESSFUL - Welcome Admin!" << RESET << endl;
+    cout << GREEN;
+    displayLine(70, '=');
+    cout << RESET << endl;
+
+    logActivity("Admin login successful (2FA verified)");
+    logAudit("Admin login - 2FA authentication passed");
+
+    while (true)
+    {
+        cout << endl;
+        printSection("ADMIN CONTROL PANEL", 55);
+        printMenuOption(1, "Manage Users (Add/Delete)", GREEN);
+        printMenuOption(2, "Inventory and Bulk Operations", BLUE);
+        printMenuOption(3, "Discounts and Promotions", YELLOW);
+        printMenuOption(4, "Activity Logs and Security Monitoring", CYAN);
+        printMenuOption(5, "Sales and Revenue Analysis", MAGENTA);
+        printMenuOption(6, "View Audit Trail", WHITE);
+        printMenuOption(7, "Send Announcement", GREEN);
+        printMenuOption(8, "Exit Menu", RED);
+        cout << endl;
+        printPrompt("Enter your choice: ");
+
+        int achoice = getValidInt(1, 8);
+
+        if (achoice == 1)
         {
-            // 2FA successful - give access to admin panel
-            cout << endl;
-            displayLine(70, '=');
-            cout << "          LOGIN + 2FA SUCCESSFUL - Welcome Admin!" << endl;
-            displayLine(70, '=');
-
-            logActivity("Admin login successful (2FA verified)");
-            logAudit("Admin login - 2FA authentication passed");
-
-            // Main admin menu loop
-            // Keep showing the menu until the admin exits
+            mnguser();
+        }
+        else if (achoice == 2)
+        {
             while (true)
             {
                 cout << endl;
-                displayLine(55, '-');
-                cout << "     ADMIN CONTROL PANEL" << endl;
-                displayLine(55, '-');
-                cout << "1. Manage Users (Add/Delete)" << endl;
-                cout << "2. Inventory and Bulk Operations" << endl;
-                cout << "3. Discounts and Promotions" << endl;
-                cout << "4. Activity Logs and Security Monitoring" << endl;
-                cout << "5. Sales and Revenue Analysis" << endl;
-                cout << "6. View Audit Trail" << endl;
-                cout << "7. Send Announcement" << endl;
-                cout << "8. Exit Menu" << endl;
-                cout << "Enter your choice: ";
+                printSection("INVENTORY & BULK OPERATIONS", 50);
+                printMenuOption(1, "Manage Inventory (Add/Edit/Delete Products)", GREEN);
+                printMenuOption(2, "Bulk Import & Export", MAGENTA);
+                printMenuOption(3, "Back", YELLOW);
+                cout << endl;
+                printPrompt("Enter your choice: ");
 
-                int achoice = getValidInt(1, 8);
+                int adchoice = getValidInt(1, 3);
 
-                if (achoice == 1)
+                if (adchoice == 1)
                 {
-                    // User management (add/delete customers/employees)
-                    mnguser();
+                    catalogueManage();
                 }
-                else if (achoice == 2)
+                else if (adchoice == 2)
                 {
-                    // Inventory and bulk operations sub-menu
-                    cout << endl;
-                    cout << "1. Manage Inventory (Add/Edit/Delete Products)" << endl;
-                    cout << "2. Bulk Import & Export" << endl;
-                    cout << "Enter your choice: ";
-
-                    int adchoice = getValidInt(1, 2);
-
-                    if (adchoice == 1)
-                    {
-                        // Shared catalogue management function (from utils)
-                        catalogueManage();
-                    }
-                    else if (adchoice == 2)
-                    {
-                        // Bulk import/export operations
-                        mngbulk();
-                    }
+                    mngbulk();
                 }
-                else if (achoice == 3)
+                else
                 {
-                    // Create discount codes
-                    mngdiscs();
-                }
-                else if (achoice == 4)
-                {
-                    // BUG FIX: Function to view activity logs
-                    // Previously the file was opened with ios::out which erased all data
-                    viewActivityLogs();
-                }
-                else if (achoice == 5)
-                {
-                    // Sales and revenue analysis
-                    revenue();
-                }
-                else if (achoice == 6)
-                {
-                    // Function to view audit trail (new feature)
-                    viewAuditTrail();
-                }
-                else if (achoice == 7)
-                {
-                    // Send announcement
-                    sendAnnouncement();
-                    logAudit("Admin sent announcement");
-                }
-                else if (achoice == 8)
-                {
-                    // Exit admin panel
-                    cout << "Exiting admin panel." << endl;
-                    logActivity("Admin logged out");
-                    logAudit("Admin logged out");
                     break;
                 }
             }
         }
+        else if (achoice == 3)
+        {
+            mngdiscs();
+            pauseScreen();
+        }
+        else if (achoice == 4)
+        {
+            viewActivityLogs();
+            pauseScreen();
+        }
+        else if (achoice == 5)
+        {
+            revenue();
+            pauseScreen();
+        }
+        else if (achoice == 6)
+        {
+            viewAuditTrail();
+            pauseScreen();
+        }
+        else if (achoice == 7)
+        {
+            sendAnnouncement();
+            logAudit("Admin sent announcement");
+            pauseScreen();
+        }
         else
         {
-            // OTP was incorrect - access denied
-            cout << "Incorrect OTP! Access DENIED." << endl;
-            logActivity("Admin login failed - wrong OTP (2FA failed)");
-            logAudit("SECURITY: Admin 2FA failed - unauthorized access attempt");
+            printWarning("Exiting admin panel.");
+            logActivity("Admin logged out");
+            logAudit("Admin logged out");
+            currentAdminName[0] = '\0';
+            break;
         }
     }
 }
 
-// ===================== averify =====================
-// Verifies the admin's login credentials
-// Matches the name and encrypted password from the file
-// Cybersecurity: authentication - first layer of 2FA
 bool averify()
 {
     bool authenticated = false;
     int attempts = 0;
 
-    do
+    while (attempts < 3 && !authenticated)
     {
         if (attempts > 0)
         {
-            cout << "Invalid credentials! Please try again." << endl;
+            printError("Invalid credentials! Please try again.");
             logActivity("Admin login failed attempt");
         }
 
-        // Dynamic memory allocation (PF requirement: new operator)
         char *aname = new char[PASS_LEN];
         char *apassword = new char[PASS_LEN];
 
-        // Take credentials from admin
-        cout << "Enter Admin Name: ";
-        cin.getline(aname, PASS_LEN);
-        cout << "Enter Admin Password: ";
-        cin.getline(apassword, PASS_LEN);
+        getNonEmptyLine("Enter Admin Name: ", aname, PASS_LEN);
+        getNonEmptyLine("Enter Admin Password: ", apassword, PASS_LEN);
 
-        // Encrypt password (shared function - no duplication)
         encryptPassword(apassword);
 
-        // Read credentials from admin file
         ifstream read("admin.txt");
         if (!read)
         {
-            cout << "Error: Could not open admin.txt!" << endl;
+            printError("Error: Could not open admin.txt!");
             delete[] aname;
             delete[] apassword;
             return false;
@@ -211,61 +202,57 @@ bool averify()
         char *fname = new char[PASS_LEN];
         char *fpassword = new char[PASS_LEN];
 
-        // Check every record
-        while (read.getline(fname, PASS_LEN, '|'))
+        while (parseUserRecord(read, fname, fpassword))
         {
-            read.getline(fpassword, PASS_LEN, '|');
-
-            // Shared compareStrings function (no duplication)
             if (compareStrings(aname, fname) && compareStrings(apassword, fpassword))
             {
                 authenticated = true;
+                copyString(currentAdminName, aname);
                 break;
             }
         }
+
         read.close();
 
-        // Free dynamic memory (PF requirement: delete operator)
         delete[] aname;
         delete[] apassword;
         delete[] fname;
         delete[] fpassword;
 
         attempts++;
+    }
 
-        if (!authenticated && attempts >= 3)
-        {
-            cout << "SECURITY WARNING: " << attempts << " invalid attempts!" << endl;
-            logActivity("Admin multiple failed login attempts - HIGH SECURITY ALERT");
-        }
-
-    } while (!authenticated);
+    if (!authenticated)
+    {
+        printError("SECURITY WARNING: 3 invalid attempts. Access blocked.");
+        logActivity("Admin multiple failed login attempts - HIGH SECURITY ALERT");
+    }
 
     return authenticated;
 }
 
-// ===================== addcustomer =====================
-// Admin can add a new customer into the system
-// The password is saved after encryption (cybersecurity)
 void addcustomer()
 {
-    // Dynamic memory allocation
     char *fname = new char[PASS_LEN];
     char *fpassword = new char[PASS_LEN];
 
-    cout << "Enter Customer Name: ";
-    cin.getline(fname, PASS_LEN);
-    cout << "Enter Customer Password: ";
-    cin.getline(fpassword, PASS_LEN);
+    getNonEmptyLine("Enter Customer Name: ", fname, PASS_LEN);
 
-    // Encrypt password (shared function)
+    if (usernameExists("customer.txt", fname))
+    {
+        printError("Customer username already exists.");
+        delete[] fname;
+        delete[] fpassword;
+        return;
+    }
+
+    getNonEmptyLine("Enter Customer Password: ", fpassword, PASS_LEN);
     encryptPassword(fpassword);
 
-    // Save in customer file
     ofstream outfile("customer.txt", ios::app);
     if (!outfile.is_open())
     {
-        cout << "Error: Could not open customer.txt!" << endl;
+        printError("Error: Could not open customer.txt!");
         delete[] fname;
         delete[] fpassword;
         return;
@@ -273,9 +260,8 @@ void addcustomer()
 
     outfile << fname << "|" << fpassword << "|" << endl;
     outfile.close();
-    cout << "Customer added successfully!" << endl;
 
-    // Record in audit trail
+    printSuccess("Customer added successfully!");
     logAudit("Admin added new customer");
     logActivity("Admin added new customer");
 
@@ -283,28 +269,28 @@ void addcustomer()
     delete[] fpassword;
 }
 
-// ===================== addemployee =====================
-// Admin can add a new employee
-// Same process as addcustomer but saved in employee file
 void addemployee()
 {
-    // Dynamic memory allocation
     char *fname = new char[PASS_LEN];
     char *fpassword = new char[PASS_LEN];
 
-    cout << "Enter Employee Name: ";
-    cin.getline(fname, PASS_LEN);
-    cout << "Enter Employee Password: ";
-    cin.getline(fpassword, PASS_LEN);
+    getNonEmptyLine("Enter Employee Name: ", fname, PASS_LEN);
 
-    // Encrypt password
+    if (usernameExists("employee.txt", fname))
+    {
+        printError("Employee username already exists.");
+        delete[] fname;
+        delete[] fpassword;
+        return;
+    }
+
+    getNonEmptyLine("Enter Employee Password: ", fpassword, PASS_LEN);
     encryptPassword(fpassword);
 
-    // Save in employee file
     ofstream outfile("employee.txt", ios::app);
     if (!outfile.is_open())
     {
-        cout << "Error: Could not open employee.txt!" << endl;
+        printError("Error: Could not open employee.txt!");
         delete[] fname;
         delete[] fpassword;
         return;
@@ -312,8 +298,8 @@ void addemployee()
 
     outfile << fname << "|" << fpassword << "|" << endl;
     outfile.close();
-    cout << "Employee added successfully!" << endl;
 
+    printSuccess("Employee added successfully!");
     logAudit("Admin added new employee");
     logActivity("Admin added new employee");
 
@@ -321,41 +307,34 @@ void addemployee()
     delete[] fpassword;
 }
 
-// ===================== deletecustomer =====================
-// Admin can delete a customer from the system
-// Removes the matching customer entry by name
-// Uses the temp file technique for safe deletion
 void deletecustomer()
 {
-    // Dynamic memory allocation
-    char *fname = new char[PASS_LEN];
-    cout << "Enter the Customer Name to delete: ";
-    cin.getline(fname, PASS_LEN);
+    char *target = new char[PASS_LEN];
+    getNonEmptyLine("Enter the Customer Name to delete: ", target, PASS_LEN);
 
-    char *line = new char[LINE_LEN];
     ifstream infile("customer.txt");
     ofstream outfile("temp.txt");
 
     if (!infile.is_open() || !outfile.is_open())
     {
-        cout << "Error: Could not open files!" << endl;
-        delete[] fname;
-        delete[] line;
+        printError("Error: Could not open files!");
+        delete[] target;
         return;
     }
 
+    char *name = new char[PASS_LEN];
+    char *password = new char[PASS_LEN];
     bool found = false;
-    // Read every line from the customer file
-    while (infile.getline(line, LINE_LEN))
+
+    while (parseUserRecord(infile, name, password))
     {
-        // If the line starts with the customer name, skip it (delete)
-        if (compareStrings(line, fname))
+        if (compareStrings(name, target))
         {
             found = true;
-            continue; // Do not write this record into temp
+            continue;
         }
-        // Preserve the remaining records in temp
-        outfile << line << endl;
+
+        outfile << name << "|" << password << "|" << endl;
     }
 
     infile.close();
@@ -365,68 +344,49 @@ void deletecustomer()
     {
         remove("customer.txt");
         rename("temp.txt", "customer.txt");
-        cout << "Customer deleted successfully!" << endl;
+        printSuccess("Customer deleted successfully!");
         logAudit("Admin deleted customer");
+        logActivity("Admin deleted customer");
     }
     else
     {
         remove("temp.txt");
-        cout << "Customer not found." << endl;
+        printError("Customer not found.");
     }
 
-    delete[] fname;
-    delete[] line;
+    delete[] target;
+    delete[] name;
+    delete[] password;
 }
 
-// ===================== deleteemployee =====================
-// Admin can delete an employee from the system
-// BUG FIX: Previously the compareStrings logic inside the delete function
-// was reversed - now it has been fixed properly
 void deleteemployee()
 {
-    // Dynamic memory allocation
-    char *fname = new char[PASS_LEN];
-    cout << "Enter the Employee Name to delete: ";
-    cin.getline(fname, PASS_LEN);
+    char *target = new char[PASS_LEN];
+    getNonEmptyLine("Enter the Employee Name to delete: ", target, PASS_LEN);
 
-    char *line = new char[LINE_LEN];
     ifstream infile("employee.txt");
     ofstream outfile("temp.txt");
 
     if (!infile.is_open() || !outfile.is_open())
     {
-        cout << "Error: Could not open files!" << endl;
-        delete[] fname;
-        delete[] line;
+        printError("Error: Could not open files!");
+        delete[] target;
         return;
     }
 
+    char *name = new char[PASS_LEN];
+    char *password = new char[PASS_LEN];
     bool found = false;
-    while (infile.getline(line, LINE_LEN))
-    {
-        // BUG FIX: Use compareStrings properly
-        // If the name matches, skip it (delete), otherwise keep it
-        // Previously there was a prefix-only bug in the nested check
-        // Extract the name using dynamic memory for comparison
-        char *tempName = new char[PASS_LEN];
-        int i = 0;
-        // Extract the name from the line until the pipe
-        while (line[i] != '|' && line[i] != '\0')
-        {
-            tempName[i] = line[i];
-            i++;
-        }
-        tempName[i] = '\0'; // Null terminate
 
-        if (compareStrings(tempName, fname))
+    while (parseUserRecord(infile, name, password))
+    {
+        if (compareStrings(name, target))
         {
             found = true;
-            delete[] tempName;
-            continue; // Skip this record (delete)
+            continue;
         }
-        // Write the remaining records into temp
-        outfile << line << endl;
-        delete[] tempName;
+
+        outfile << name << "|" << password << "|" << endl;
     }
 
     infile.close();
@@ -436,63 +396,68 @@ void deleteemployee()
     {
         remove("employee.txt");
         rename("temp.txt", "employee.txt");
-        cout << "Employee deleted successfully!" << endl;
+        printSuccess("Employee deleted successfully!");
         logAudit("Admin deleted employee");
+        logActivity("Admin deleted employee");
     }
     else
     {
         remove("temp.txt");
-        cout << "Employee not found." << endl;
+        printError("Employee not found.");
     }
 
-    delete[] fname;
-    delete[] line;
+    delete[] target;
+    delete[] name;
+    delete[] password;
 }
 
-// ===================== mnguser =====================
-// User management menu - add/delete customers and employees
-// Admin-only feature (access control)
 void mnguser()
 {
-    cout << endl;
-    displayLine(50, '=');
-    cout << "     USER MANAGEMENT" << endl;
-    displayLine(50, '=');
-    cout << "1. Add New Customer" << endl;
-    cout << "2. Add New Employee" << endl;
-    cout << "3. Delete Customer" << endl;
-    cout << "4. Delete Employee" << endl;
-    cout << "Enter your choice: ";
+    while (true)
+    {
+        cout << endl;
+        printSection("USER MANAGEMENT", 50);
+        printMenuOption(1, "Add New Customer", GREEN);
+        printMenuOption(2, "Add New Employee", BLUE);
+        printMenuOption(3, "Delete Customer", YELLOW);
+        printMenuOption(4, "Delete Employee", RED);
+        printMenuOption(5, "Back", WHITE);
+        cout << endl;
+        printPrompt("Enter your choice: ");
 
-    int mng = getValidInt(1, 4);
+        int mng = getValidInt(1, 5);
 
-    if (mng == 1)
-    {
-        addcustomer();
-    }
-    else if (mng == 2)
-    {
-        addemployee();
-    }
-    else if (mng == 3)
-    {
-        deletecustomer();
-    }
-    else if (mng == 4)
-    {
-        deleteemployee();
+        if (mng == 1)
+        {
+            addcustomer();
+            pauseScreen();
+        }
+        else if (mng == 2)
+        {
+            addemployee();
+            pauseScreen();
+        }
+        else if (mng == 3)
+        {
+            deletecustomer();
+            pauseScreen();
+        }
+        else if (mng == 4)
+        {
+            deleteemployee();
+            pauseScreen();
+        }
+        else
+        {
+            break;
+        }
     }
 }
 
-// ===================== exportextra =====================
-// Exports products with extra stock into extra.txt
-// Products with quantity 10 or more are exported
-// Part of the admin's bulk management feature
 void exportextra()
 {
-    // Dynamic memory allocation
     char *price = new char[NAME_LEN];
-    char *p_ID = new char[NAME_LEN];
+    char *p_ID = new char[ID_LEN];
     char *name = new char[NAME_LEN];
     char *category = new char[NAME_LEN];
     int quantity;
@@ -500,7 +465,7 @@ void exportextra()
     fstream read("catalogue.txt", ios::in);
     if (!read.is_open())
     {
-        cout << "Error: Could not open catalogue.txt!" << endl;
+        printError("Error: Could not open catalogue.txt!");
         delete[] price;
         delete[] p_ID;
         delete[] name;
@@ -508,50 +473,65 @@ void exportextra()
         return;
     }
 
-    // Show products with extra stock
     cout << endl;
-    displayLine(70, '=');
-    cout << "  Products with 10 or more items in stock:" << endl;
-    displayLine(70, '=');
+    printSection("PRODUCTS WITH EXTRA STOCK", 70);
     cout << left << setw(25) << "Product" << "$" << setw(10) << "Price"
          << setw(20) << "Category" << setw(10) << "ID"
          << setw(10) << "Stock" << endl;
+    cout << CYAN;
     displayLine(70, '-');
+    cout << RESET;
+
+    bool hasAny = false;
 
     while (read.getline(price, NAME_LEN, '|'))
     {
-        read.getline(p_ID, NAME_LEN, '|');
+        read.getline(p_ID, ID_LEN, '|');
         read.getline(name, NAME_LEN, '|');
         read.getline(category, NAME_LEN, '|');
         read >> quantity;
         read.ignore(1, '\n');
 
-        // Show only items with 10+ stock
         if (quantity >= 10)
         {
             cout << left << setw(25) << name << "$" << setw(10) << price
                  << setw(20) << category << setw(10) << p_ID
                  << setw(10) << quantity << endl;
+            hasAny = true;
         }
     }
     read.close();
-    displayLine(70, '-');
 
-    // Ask user for confirmation before exporting
-    cout << "Do you want to export extra items?" << endl;
-    cout << "1. Yes" << endl;
-    cout << "2. No" << endl;
-    cout << "Enter your choice: ";
+    if (!hasAny)
+    {
+        printWarning("No products with extra stock found.");
+        cout << CYAN;
+        displayLine(70, '-');
+        cout << RESET;
+        delete[] price;
+        delete[] p_ID;
+        delete[] name;
+        delete[] category;
+        return;
+    }
+
+    cout << CYAN;
+    displayLine(70, '-');
+    cout << RESET;
+
+    printInfo("Do you want to export extra items?");
+    printMenuOption(1, "Yes", GREEN);
+    printMenuOption(2, "No", RED);
+    printPrompt("Enter your choice: ");
 
     int mng = getValidInt(1, 2);
 
     if (mng == 1)
     {
-        // Export into extra.txt
         fstream write("extra.txt", ios::out);
         if (!write.is_open())
         {
-            cout << "Error: Could not open extra.txt!" << endl;
+            printError("Error: Could not open extra.txt!");
             delete[] price;
             delete[] p_ID;
             delete[] name;
@@ -559,11 +539,10 @@ void exportextra()
             return;
         }
 
-        // Read catalogue again and export extra items
         read.open("catalogue.txt", ios::in);
         if (!read.is_open())
         {
-            cout << "Error: Could not reopen catalogue.txt!" << endl;
+            printError("Error: Could not reopen catalogue.txt!");
             write.close();
             delete[] price;
             delete[] p_ID;
@@ -574,7 +553,7 @@ void exportextra()
 
         while (read.getline(price, NAME_LEN, '|'))
         {
-            read.getline(p_ID, NAME_LEN, '|');
+            read.getline(p_ID, ID_LEN, '|');
             read.getline(name, NAME_LEN, '|');
             read.getline(category, NAME_LEN, '|');
             read >> quantity;
@@ -585,32 +564,27 @@ void exportextra()
                 write << price << "|" << p_ID << "|" << name << "|" << category << "|" << quantity << endl;
             }
         }
+
         read.close();
         write.close();
-        cout << "Extra items exported successfully!" << endl;
+        printSuccess("Extra items exported successfully!");
         logAudit("Admin exported extra stock items");
     }
     else
     {
-        cout << "Export cancelled." << endl;
+        printWarning("Export cancelled.");
     }
 
-    // Free dynamic memory
     delete[] price;
     delete[] p_ID;
     delete[] name;
     delete[] category;
 }
 
-// ===================== importStock =====================
-// Restocks low stock items (adds 10 pieces)
-// The name was previously 'import' which was confusing, now it is 'importStock'
-// The catalogue is updated using the temp file technique
 void importStock()
 {
-    // Dynamic memory allocation
     char *price = new char[NAME_LEN];
-    char *p_ID = new char[NAME_LEN];
+    char *p_ID = new char[ID_LEN];
     char *name = new char[NAME_LEN];
     char *category = new char[NAME_LEN];
     int quantity;
@@ -618,7 +592,7 @@ void importStock()
     fstream read("catalogue.txt", ios::in);
     if (!read.is_open())
     {
-        cout << "Error: Could not open catalogue.txt!" << endl;
+        printError("Error: Could not open catalogue.txt!");
         delete[] price;
         delete[] p_ID;
         delete[] name;
@@ -626,19 +600,20 @@ void importStock()
         return;
     }
 
-    // Show low stock products
     cout << endl;
-    displayLine(70, '=');
-    cout << "  Products with 5 or fewer items in stock (LOW STOCK):" << endl;
-    displayLine(70, '=');
+    printSection("LOW STOCK PRODUCTS", 70);
     cout << left << setw(25) << "Product" << "$" << setw(10) << "Price"
          << setw(20) << "Category" << setw(10) << "ID"
          << setw(10) << "Stock" << endl;
+    cout << CYAN;
     displayLine(70, '-');
+    cout << RESET;
+
+    bool hasAny = false;
 
     while (read.getline(price, NAME_LEN, '|'))
     {
-        read.getline(p_ID, NAME_LEN, '|');
+        read.getline(p_ID, ID_LEN, '|');
         read.getline(name, NAME_LEN, '|');
         read.getline(category, NAME_LEN, '|');
         read >> quantity;
@@ -648,29 +623,44 @@ void importStock()
         {
             cout << left << setw(25) << name << "$" << setw(10) << price
                  << setw(20) << category << setw(10) << p_ID
-                 << setw(10) << quantity << " *** LOW ***" << endl;
+                 << setw(10) << quantity << BOLD << RED << " LOW" << RESET << endl;
+            hasAny = true;
         }
     }
     read.close();
-    displayLine(70, '-');
 
-    // Ask user for confirmation
-    cout << "Do you want to add 10 pieces to these items?" << endl;
-    cout << "1. Yes" << endl;
-    cout << "2. No" << endl;
-    cout << "Enter your choice: ";
+    if (!hasAny)
+    {
+        printSuccess("No low stock items found.");
+        cout << CYAN;
+        displayLine(70, '-');
+        cout << RESET;
+        delete[] price;
+        delete[] p_ID;
+        delete[] name;
+        delete[] category;
+        return;
+    }
+
+    cout << CYAN;
+    displayLine(70, '-');
+    cout << RESET;
+
+    printInfo("Do you want to add 10 pieces to these items?");
+    printMenuOption(1, "Yes", GREEN);
+    printMenuOption(2, "No", RED);
+    printPrompt("Enter your choice: ");
 
     int mng = getValidInt(1, 2);
 
     if (mng == 1)
     {
-        // Update using the temp file technique
         fstream readFile("catalogue.txt", ios::in);
         fstream writeFile("temp.txt", ios::out);
 
         if (!readFile.is_open() || !writeFile.is_open())
         {
-            cout << "Error: Could not open files!" << endl;
+            printError("Error: Could not open files!");
             delete[] price;
             delete[] p_ID;
             delete[] name;
@@ -680,23 +670,19 @@ void importStock()
 
         while (readFile.getline(price, NAME_LEN, '|'))
         {
-            readFile.getline(p_ID, NAME_LEN, '|');
+            readFile.getline(p_ID, ID_LEN, '|');
             readFile.getline(name, NAME_LEN, '|');
             readFile.getline(category, NAME_LEN, '|');
             readFile >> quantity;
             readFile.ignore(1, '\n');
 
-            // If stock is low, add 10
             if (quantity <= 5)
             {
-                writeFile << price << "|" << p_ID << "|" << name << "|"
-                          << category << "|" << (quantity + 10) << endl;
+                writeFile << price << "|" << p_ID << "|" << name << "|" << category << "|" << (quantity + 10) << endl;
             }
             else
             {
-                // Keep the remaining products unchanged
-                writeFile << price << "|" << p_ID << "|" << name << "|"
-                          << category << "|" << quantity << endl;
+                writeFile << price << "|" << p_ID << "|" << name << "|" << category << "|" << quantity << endl;
             }
         }
 
@@ -705,110 +691,100 @@ void importStock()
         remove("catalogue.txt");
         rename("temp.txt", "catalogue.txt");
 
-        cout << "10 pieces have been added to low stock items!" << endl;
+        printSuccess("10 pieces have been added to low stock items!");
         logAudit("Admin restocked low inventory items (+10 each)");
     }
     else
     {
-        cout << "Restocking cancelled." << endl;
+        printWarning("Restocking cancelled.");
     }
 
-    // Free dynamic memory
     delete[] price;
     delete[] p_ID;
     delete[] name;
     delete[] category;
 }
 
-// ===================== mngbulk =====================
-// Displays the bulk import/export menu
-// Export: export extra stock items
-// Import: restock low stock items
 void mngbulk()
 {
-    cout << endl;
-    displayLine(40, '=');
-    cout << "     BULK OPERATIONS" << endl;
-    displayLine(40, '=');
-    cout << "1. Export Extra Stock" << endl;
-    cout << "2. Import Low Stock (Restock)" << endl;
-    cout << "Enter your choice: ";
-
-    int mng = getValidInt(1, 2);
-
-    if (mng == 1)
+    while (true)
     {
-        exportextra();
-    }
-    else if (mng == 2)
-    {
-        importStock();
+        cout << endl;
+        printSection("BULK OPERATIONS", 40);
+        printMenuOption(1, "Export Extra Stock", GREEN);
+        printMenuOption(2, "Import Low Stock (Restock)", BLUE);
+        printMenuOption(3, "Back", YELLOW);
+        cout << endl;
+        printPrompt("Enter your choice: ");
+
+        int mng = getValidInt(1, 3);
+
+        if (mng == 1)
+        {
+            exportextra();
+            pauseScreen();
+        }
+        else if (mng == 2)
+        {
+            importStock();
+            pauseScreen();
+        }
+        else
+        {
+            break;
+        }
     }
 }
 
-// ===================== mngdiscs =====================
-// Creates and manages discount codes
-// BUG FIX: Previously it wrote to "dicounts.txt" (typo)
-// Now it correctly writes to "discount.txt"
 void mngdiscs()
 {
     cout << endl;
-    displayLine(40, '=');
-    cout << "     DISCOUNT MANAGEMENT" << endl;
-    displayLine(40, '=');
+    printSection("DISCOUNT MANAGEMENT", 40);
 
-    // Dynamic memory allocation
     char *disc = new char[NAME_LEN];
-    cout << "Enter Discount Code: ";
-    cin.getline(disc, NAME_LEN, '\n');
+    getNonEmptyLine("Enter Discount Code: ", disc, NAME_LEN);
 
-    cout << "Enter Discount Percentage (1-100): ";
+    printPrompt("Enter Discount Percentage (1-100): ");
     int percentage = getValidInt(1, 100);
 
-    // BUG FIX: Correct filename "discount.txt" (previously "dicounts.txt" - typo)
     fstream write("discount.txt", ios::app);
     if (write.is_open())
     {
         write << disc << "|" << percentage << endl;
         write.close();
-        cout << "Discount Code '" << disc << "' (" << percentage << "% OFF) added successfully!" << endl;
+        printSuccess("Discount code added successfully!");
         logAudit("Admin created new discount code");
     }
     else
     {
-        cout << "Error: Could not open discount.txt!" << endl;
+        printError("Error: Could not open discount.txt!");
     }
 
     delete[] disc;
 }
 
-// ===================== revenue =====================
-// Performs sales and revenue analysis
-// Reads data from order history and calculates total revenue
-// BUG FIX: ttl is now properly initialized to 0
-// Previously it was uninitialized - garbage values caused incorrect results
 void revenue()
 {
-    // Dynamic memory allocation
     char *readname = new char[NAME_LEN];
     char *readproduct = new char[NAME_LEN];
     int readprice;
     char *readp_ID = new char[ID_LEN];
     int readquantity;
 
-    // BUG FIX: Initialize ttl with 0
     int ttl = 0;
 
     fstream read("orderhistory.txt", ios::in);
 
     cout << endl;
-    displayLine(70, '=');
-    cout << "          SALES & REVENUE ANALYSIS" << endl;
-    displayLine(70, '=');
+    printSection("SALES & REVENUE ANALYSIS", 70);
     cout << left << setw(20) << "Customer" << setw(20) << "Product"
          << "$" << setw(10) << "Price" << setw(10) << "Qty"
          << setw(10) << "ID" << endl;
+    cout << CYAN;
     displayLine(70, '-');
+    cout << RESET;
+
+    bool hasData = false;
 
     if (read.is_open())
     {
@@ -819,115 +795,107 @@ void revenue()
             read.ignore(1, '|');
             read.getline(readp_ID, ID_LEN, '|');
             read >> readquantity;
-            read.ignore();
+            read.ignore(1000, '\n');
 
-            // Calculate revenue
             ttl += (readprice * readquantity);
 
             cout << left << setw(20) << readname << setw(20) << readproduct
                  << "$" << setw(10) << readprice << setw(10) << readquantity
                  << setw(10) << readp_ID << endl;
+            hasData = true;
         }
-    }
-    else
-    {
-        cout << "Could not open order history file." << endl;
+        read.close();
     }
 
+    if (!hasData)
+    {
+        printWarning("No sales record found.");
+    }
+
+    cout << CYAN;
     displayLine(70, '-');
-    cout << "TOTAL REVENUE: $" << ttl << endl;
+    cout << RESET;
+    cout << BOLD << GREEN << "TOTAL REVENUE: $" << ttl << RESET << endl;
+    cout << CYAN;
     displayLine(70, '=');
-    read.close();
+    cout << RESET;
 
     logAudit("Admin viewed revenue report");
 
-    // Free dynamic memory
     delete[] readname;
     delete[] readproduct;
     delete[] readp_ID;
 }
 
-// ===================== viewAuditTrail =====================
-// Displays the audit trail
-// Shows the record of all admin actions - for accountability
-// Cybersecurity: Audit trail feature - everything is recorded
-// Previously this function was EMPTY - now it is properly implemented
 void viewAuditTrail()
 {
-    // Dynamic memory allocation
     char *line = new char[TEXT_LEN];
 
     fstream read("audit.txt", ios::in);
 
     cout << endl;
-    displayLine(70, '=');
-    cout << "          AUDIT TRAIL" << endl;
-    displayLine(70, '=');
+    printSection("AUDIT TRAIL", 70);
 
     if (read.is_open())
     {
         bool hasRecords = false;
         while (read.getline(line, TEXT_LEN))
         {
-            cout << "  " << line << endl;
+            cout << WHITE << "  " << line << RESET << endl;
             hasRecords = true;
         }
 
         if (!hasRecords)
         {
-            cout << "  No audit record found." << endl;
+            printWarning("No audit record found.");
         }
         read.close();
     }
     else
     {
-        cout << "  Audit file has not been created yet (no actions recorded)." << endl;
+        printWarning("Audit file has not been created yet.");
     }
 
+    cout << CYAN;
     displayLine(70, '=');
+    cout << RESET;
     logAudit("Admin viewed audit trail");
 
     delete[] line;
 }
 
-// ===================== viewActivityLogs =====================
-// Displays activity logs - for security monitoring
-// BUG FIX: Previously the file was opened with ios::out which ERASED all data
-// Now it is correctly opened with ios::in (read-only)
 void viewActivityLogs()
 {
-    // Dynamic memory allocation
     char *line = new char[TEXT_LEN];
 
-    // BUG FIX: Use ios::in (previously ios::out which truncated the file)
     fstream read("activity.txt", ios::in);
 
     cout << endl;
-    displayLine(70, '=');
-    cout << "          ACTIVITY LOGS - Security Monitoring" << endl;
-    displayLine(70, '=');
+    printSection("ACTIVITY LOGS - SECURITY MONITORING", 70);
 
     if (read.is_open())
     {
         bool hasLogs = false;
         while (read.getline(line, TEXT_LEN))
         {
-            cout << "  " << line << endl;
+            cout << WHITE << "  " << line << RESET << endl;
             hasLogs = true;
         }
 
         if (!hasLogs)
         {
-            cout << "  No activity logs found." << endl;
+            printWarning("No activity logs found.");
         }
         read.close();
     }
     else
     {
-        cout << "  Activity log file not found." << endl;
+        printWarning("Activity log file not found.");
     }
 
+    cout << CYAN;
     displayLine(70, '=');
+    cout << RESET;
     logAudit("Admin reviewed activity logs");
 
     delete[] line;
