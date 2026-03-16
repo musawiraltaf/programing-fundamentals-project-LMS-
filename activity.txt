@@ -1,0 +1,11 @@
+[Thu Mar  5 00:28:09 2026] Admin login failed attempt
+[Thu Mar  5 00:28:19 2026] Admin login failed attempt
+[Thu Mar  5 00:28:47 2026] Admin multiple failed login attempts - HIGH SECURITY ALERT
+[Thu Mar  5 00:28:47 2026] Admin login failed attempt
+[Thu Mar  5 00:28:59 2026] Admin multiple failed login attempts - HIGH SECURITY ALERT
+[Thu Mar  5 00:28:59 2026] Admin login failed attempt
+[Thu Mar  5 00:28:59 2026] Admin multiple failed login attempts - HIGH SECURITY ALERT
+[Thu Mar  5 00:28:59 2026] Admin login failed attempt
+[Thu Mar  5 00:28:59 2026] Admin multiple failed login attempts - HIGH SECURITY ALERT
+[Mon Mar 16 01:22:59 2026] Admin login successful (2FA verified)
+[Mon Mar 16 01:25:47 2026] Product added to catalogue

@@ -1,0 +1,10 @@
+2000|pS001|martphone|Electronics|10        
+1200|p002|Laptop|Electronics|10        
+90|p003|Bluetooth|Electronics|1        
+150|p005|Air Fryer|Home & Kitchen|1        
+250|p006|Vacuum Cleaner-Away|Home & Kitchen|10        
+300|p007|Stand Mixer|Home & Kitchen|10        
+30|p008|M T-Shirt|Fashion & Accessories|5        
+80|p009|W Sweater|Fashion & Accessories|10        
+60|p010|Jeans|Fashion & Accessories|100
+30000|245|ffffAAAAAAAAAAHHHH|tre|2

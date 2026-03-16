@@ -1,0 +1,7 @@
+p009|W Sweater|Musawir
+p008|M T-Shirt|Musawir
+p006|Vacuum Cleaner-Away|Altaf
+p008|M T-Shirt|Altaf
+p003|Bluetooth Headphones|Altaf
+p004|Smartwatch|Altaf
+p001|Smartphone|Altaf
